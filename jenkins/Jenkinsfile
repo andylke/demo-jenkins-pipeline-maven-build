@@ -1,0 +1,16 @@
+pipeline {
+  agent any
+  tools {
+      maven 'maven-3.8.6'
+  }
+  environment {
+      MAVEN_POM_VERSION = readMavenPom().getVersion()
+  }
+  stages {
+    stage('Print Variables') {
+      steps {
+      echo "Maven Pom Version = [${MAVEN_POM_VERSION}]"
+      }
+    }
+  }
+}
