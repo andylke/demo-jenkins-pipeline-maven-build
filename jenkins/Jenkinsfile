@@ -5,9 +5,13 @@ pipeline {
   }
   environment {
       MAVEN_POM_VERSION = readMavenPom().getVersion()
-      echo "Maven Pom Version = [${MAVEN_POM_VERSION}]"
   }
   stages {
+    stage ('Variables') {
+      steps {
+        echo "Maven Pom Version = [${MAVEN_POM_VERSION}]"
+      }
+    }
     stage ('Maven Build') {
         steps {
             sh 'mvn clean package'
