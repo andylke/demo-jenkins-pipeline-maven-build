@@ -1,21 +1,41 @@
 pipeline {
   agent any
   tools {
-      maven 'maven-3.8.6'
+    maven 'maven-3.8.6'
   }
   environment {
-      MAVEN_POM_VERSION = readMavenPom().getVersion()
+    MAVEN_POM_VERSION = readMavenPom().getVersion()
+    BUILD_VERSION = MAVEN_POM_VERSION
   }
   stages {
-    stage ('Variables') {
-      steps {
-        echo "Maven Pom Version = [${MAVEN_POM_VERSION}]"
-      }
-    }
     stage ('Maven Build') {
         steps {
-            sh 'mvn clean package'
+          sh 'mvn clean package'
         }
+    }
+    stage('Docker Build') {
+      steps {
+        script {
+          docker.build("andylke/demo-jenkins-pipeline-spring-boot:${BUILD_VERSION}")
+        }
+      }
+    }
+    stage('Docker Push') {
+      steps {
+        script {
+          docker.withRegistry('https://registry.hub.docker.com', 'docker-credential') {
+              docker.image("andylke/demo-jenkins-pipeline-spring-boot:${BUILD_VERSION}").push()
+              docker.image("andylke/demo-jenkins-pipeline-spring-boot:${BUILD_VERSION}").push("latest")
+          }
+        }
+      }
+    }
+    stage('Docker Run'){
+      steps {
+        sh "docker stop demo-jenkins-pipeline-spring-boot | true"
+        sh "docker rm demo-jenkins-pipeline-spring-boot | true"
+        sh "docker run --name demo-jenkins-pipeline-spring-boot -d -p 28080:8080 andylke/demo-jenkins-pipeline-spring-boot:${BUILD_VERSION}"
+      }
     }
   }
 }
