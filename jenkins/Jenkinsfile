@@ -4,13 +4,12 @@ pipeline {
     maven 'maven-3'
   }
   environment {
-    MAVEN_POM_VERSION = readMavenPom().getVersion()
-    BUILD_VERSION = "${MAVEN_POM_VERSION}"
+    BUILD_VERSION = "${POM_VERSION}"
   }
   stages {
     stage ('Maven Build') {
         steps {
-          sh 'mvn clean package'
+          bat 'mvn clean package'
         }
     }
     stage('Docker Build') {
