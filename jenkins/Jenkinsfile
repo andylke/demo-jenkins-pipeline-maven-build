@@ -10,7 +10,7 @@ pipeline {
   stages {
     stage ('Maven Build') {
         steps {
-          sh 'mvn clean package'
+          bat 'mvn clean package'
         }
     }
     stage('Docker Build') {
@@ -32,9 +32,9 @@ pipeline {
     }
     stage('Docker Run'){
       steps {
-        sh "docker stop demo-jenkins-pipeline-spring-boot | true"
-        sh "docker rm demo-jenkins-pipeline-spring-boot | true"
-        sh "docker run --name demo-jenkins-pipeline-spring-boot -d -p 28080:8080 andylke/demo-jenkins-pipeline-spring-boot:${BUILD_VERSION}"
+        bat "docker stop demo-jenkins-pipeline-spring-boot | true"
+        bat "docker rm demo-jenkins-pipeline-spring-boot | true"
+        bat "docker run --name demo-jenkins-pipeline-spring-boot -d -p 28080:8080 andylke/demo-jenkins-pipeline-spring-boot:${BUILD_VERSION}"
       }
     }
   }
