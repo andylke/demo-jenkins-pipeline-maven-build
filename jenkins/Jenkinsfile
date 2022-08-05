@@ -4,8 +4,9 @@ pipeline {
     maven 'maven-3'
   }
   environment {
-    MAVEN_POM_VERSION = readMavenPom().getVersion()
-    BUILD_VERSION = "${MAVEN_POM_VERSION}"
+    BUILD_GROUP_ID = "andylke"
+    BUILD_ARTIFACT_ID = readMavenPom().getArtifactId()
+    BUILD_VERSION = readMavenPom().getVersion()
   }
   stages {
     stage ('Maven Build') {
@@ -16,7 +17,7 @@ pipeline {
     stage('Docker Build') {
       steps {
         script {
-          docker.build("andylke/demo-jenkins-pipeline-spring-boot:${BUILD_VERSION}")
+          docker.build("${BUILD_GROUP_ID}/${BUILD_ARTIFACT_ID}:${BUILD_VERSION}", "--build-arg${BUILD_ARTIFACT_ID} --build-arg ${BUILD_VERSION}")
         }
       }
     }
@@ -24,17 +25,17 @@ pipeline {
       steps {
         script {
           docker.withRegistry('https://registry.hub.docker.com', 'docker-credential') {
-              docker.image("andylke/demo-jenkins-pipeline-spring-boot:${BUILD_VERSION}").push()
-              docker.image("andylke/demo-jenkins-pipeline-spring-boot:${BUILD_VERSION}").push("latest")
+              docker.image("${BUILD_GROUP_ID}/${BUILD_ARTIFACT_ID}:${BUILD_VERSION}").push()
+              docker.image("${BUILD_GROUP_ID}/${BUILD_ARTIFACT_ID}:${BUILD_VERSION}").push("latest")
           }
         }
       }
     }
     stage('Docker Run'){
       steps {
-        bat "docker stop demo-jenkins-pipeline-spring-boot | true"
-        bat "docker rm demo-jenkins-pipeline-spring-boot | true"
-        bat "docker run --name demo-jenkins-pipeline-spring-boot -d -p 28080:8080 andylke/demo-jenkins-pipeline-spring-boot:${BUILD_VERSION}"
+        bat "docker stop ${BUILD_ARTIFACT_ID} | true"
+        bat "docker rm ${BUILD_ARTIFACT_ID} | true"
+        bat "docker run --name ${BUILD_ARTIFACT_ID} -d -p 28080:8080 ${BUILD_GROUP_ID}/${BUILD_ARTIFACT_ID}:${BUILD_VERSION}"
       }
     }
   }
