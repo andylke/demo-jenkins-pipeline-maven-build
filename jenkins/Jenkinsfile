@@ -17,7 +17,8 @@ pipeline {
     stage('Docker Build') {
       steps {
         script {
-          docker.build("${BUILD_GROUP_ID}/${BUILD_ARTIFACT_ID}:${BUILD_VERSION}", "--build-arg ${BUILD_ARTIFACT_ID} --build-arg ${BUILD_VERSION} .")
+          docker.build("${BUILD_GROUP_ID}/${BUILD_ARTIFACT_ID}:${BUILD_VERSION}",
+              "--build-arg BUILD_ARTIFACT_ID=${BUILD_ARTIFACT_ID} --build-arg BUILD_VERSION=${BUILD_VERSION} .")
         }
       }
     }
