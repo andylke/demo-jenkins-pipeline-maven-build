@@ -14,7 +14,7 @@ pipeline {
     stage ('Increment Patch Version') {
       when {
         expression {
-          return BUILD_VERSION == ~"\\d+.\\d+.\\d+"
+          return BUILD_VERSION == ~"\\d+\.\\d+\.\\d+"
         }
       }
       steps {
