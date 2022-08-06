@@ -34,7 +34,7 @@ pipeline {
     }
     stage('Docker Stop') {
       steps {
-        bat "docker ps -q --filter "name=${BUILD_ARTIFACT_ID}" | grep -q . && docker stop ${BUILD_ARTIFACT_ID} && docker rm ${BUILD_ARTIFACT_ID}"
+        bat "docker ps -q --filter name=${BUILD_ARTIFACT_ID} | grep -q . && docker stop ${BUILD_ARTIFACT_ID} && docker rm ${BUILD_ARTIFACT_ID}"
       }
     }
     stage('Docker Run'){
