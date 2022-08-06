@@ -32,10 +32,13 @@ pipeline {
         }
       }
     }
+    stage('Docker Stop') {
+      steps {
+        bat "docker ps -q --filter "name=${BUILD_ARTIFACT_ID}" | grep -q . && docker stop ${BUILD_ARTIFACT_ID} && docker rm ${BUILD_ARTIFACT_ID}"
+      }
+    }
     stage('Docker Run'){
       steps {
-        bat "docker stop ${BUILD_ARTIFACT_ID} | true"
-        bat "docker rm ${BUILD_ARTIFACT_ID} | true"
         bat "docker run --name ${BUILD_ARTIFACT_ID} -d -p 28080:8080 ${BUILD_GROUP_ID}/${BUILD_ARTIFACT_ID}:${BUILD_VERSION}"
       }
     }
