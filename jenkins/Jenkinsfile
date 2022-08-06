@@ -7,8 +7,20 @@ pipeline {
     BUILD_GROUP_ID = "andylke"
     BUILD_ARTIFACT_ID = readMavenPom().getArtifactId()
     BUILD_VERSION = readMavenPom().getVersion()
+
+    SCM_URL = scm.getUserRemoteConfigs()[0].getUrl()
   }
   stages {
+    stage ('Increment Patch Version') {
+      when {
+        expression {
+          return BUILD_VERSION == ~"\d+.\d+.\d+"
+        }
+      }
+      steps {
+        echo "SCM_URL=${SCM_URL}"
+      }
+    }
     stage ('Maven Build') {
         steps {
           bat 'mvn clean package'
