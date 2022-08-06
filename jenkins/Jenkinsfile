@@ -13,7 +13,7 @@ pipeline {
   stages {
     stage ('Increment Patch Version') {
       when {
-        environment name: 'BUILD_VERSION', value: '1.0.0'
+        environment name: 'BUILD_VERSION', pattern: "\\d+\\.\\d+\\.\\d+", comparator: "REGEXP"
       }
       steps {
         echo "SCM_URL=${SCM_URL}"
