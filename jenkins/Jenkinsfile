@@ -1,30 +1,54 @@
 pipeline {
   agent any
   tools {
-    maven 'maven-3'
+    maven "maven-3"
   }
   environment {
     BUILD_GROUP_ID = "andylke"
     BUILD_ARTIFACT_ID = readMavenPom().getArtifactId()
     BUILD_VERSION = readMavenPom().getVersion()
-
-    SCM_URL = scm.getUserRemoteConfigs()[0].getUrl()
   }
   stages {
-    stage ('Increment Patch Version') {
+    stage ("Check Version Type") {
+      steps {
+        script {
+          env.INCREMENT_VERSION = "${BUILD_VERSION}".endsWith("-SNAPSHOT") ? "NO" : "YES"
+        }
+      }
+    }
+    stage ("Increment Build Version") {
       when {
-        environment name: 'BUILD_VERSION', pattern: "\\d+\\.\\d+\\.\\d+", comparator: "REGEXP"
+        environment name: "INCREMENT_VERSION", value: "YES"
       }
       steps {
-        echo "SCM_URL=${SCM_URL}"
+        script {
+          def (majorVersion, minorVersion, patchVersion) = "${BUILD_VERSION}".split("\\.")
+          env.BUILD_VERSION = majorVersion + "." + minorVersion + "." + (patchVersion.toInteger() + 1)
+        }
+        bat "mvn versions:set -DnewVersion=${BUILD_VERSION}"
       }
     }
-    stage ('Maven Build') {
+    stage ("Maven Build") {
         steps {
-          bat 'mvn clean package'
+          bat "mvn clean package"
         }
     }
-    stage('Docker Build') {
+    stage ("Commit & Push Build Version to Git") {
+      when {
+        environment name: "INCREMENT_VERSION", value: "YES"
+      }
+      steps {
+        script {
+          def env.GIT_REPOSITORY_URL = scm.getUserRemoteConfigs()[0].getUrl().minus("https://")
+          withCredentials([usernamePassword(credentialsId: "github-credential", usernameVariable: "GIT_USERNAME", passwordVariable: "GIT_PASSWORD")]){
+            sh("git add pom.xml")
+            sh("git commit -m 'Update version to ${BUILD_VERSION}'")
+            sh("git push https://${GIT_USERNAME}:${GIT_USERNAME}@${GIT_REPOSITORY_URL}")
+          }
+        }
+      }
+    }
+    stage("Docker Build") {
       steps {
         script {
           docker.build("${BUILD_GROUP_ID}/${BUILD_ARTIFACT_ID}:${BUILD_VERSION}",
@@ -32,17 +56,17 @@ pipeline {
         }
       }
     }
-    stage('Docker Push') {
+    stage("Docker Push") {
       steps {
         script {
-          docker.withRegistry('https://registry.hub.docker.com', 'docker-credential') {
+          docker.withRegistry("https://registry.hub.docker.com", "docker-credential") {
               docker.image("${BUILD_GROUP_ID}/${BUILD_ARTIFACT_ID}:${BUILD_VERSION}").push()
               docker.image("${BUILD_GROUP_ID}/${BUILD_ARTIFACT_ID}:${BUILD_VERSION}").push("latest")
           }
         }
       }
     }
-    stage('Docker Stop') {
+    stage("Docker Stop") {
       steps {
         script {
           try {
@@ -54,7 +78,7 @@ pipeline {
         }
       }
     }
-    stage('Docker Run'){
+    stage("Docker Run"){
       steps {
         bat "docker run --name ${BUILD_ARTIFACT_ID} -d -p 28080:8080 ${BUILD_GROUP_ID}/${BUILD_ARTIFACT_ID}:${BUILD_VERSION}"
       }
