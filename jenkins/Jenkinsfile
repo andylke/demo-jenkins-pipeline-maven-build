@@ -39,7 +39,7 @@ pipeline {
       }
       steps {
         script {
-          def env.GIT_REPOSITORY_URL = scm.getUserRemoteConfigs()[0].getUrl().minus("https://")
+          env.GIT_REPOSITORY_URL = scm.getUserRemoteConfigs()[0].getUrl().minus("https://")
           withCredentials([usernamePassword(credentialsId: "github-credential", usernameVariable: "GIT_USERNAME", passwordVariable: "GIT_PASSWORD")]){
             sh("git add pom.xml")
             sh("git commit -m 'Update version to ${BUILD_VERSION}'")
