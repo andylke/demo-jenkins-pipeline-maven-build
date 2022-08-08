@@ -3,16 +3,22 @@ pipeline {
   tools {
     maven "maven-3"
   }
-  environment {
-    GIT_CREDENTIAL_ID = "github-credential"
-    DOCKER_REGISTRY_URL = "https://registry.hub.docker.com"
-    DOCKER_CREDENTIAL_ID = "docker-credential"
-
-    PROJECT_GROUP_ID = "andylke"
-    PROJECT_ARTIFACT_ID = readMavenPom().getArtifactId()
-    PROJECT_VERSION = readMavenPom().getVersion()
-  }
   stages {
+    stage ("Prepare Environment") {
+      script {
+        env.PROJECT_GROUP_ID = "andylke"
+        def mavenPom = readMavenPom()
+        env.PROJECT_ARTIFACT_ID = mavenPom.getArtifactId()
+        env.PROJECT_VERSION = mavenPom.getVersion()
+
+        env.GIT_CREDENTIAL_ID = "github-credential"
+        env.GIT_REPOSITORY_URL_PREFIX = "https://"
+        env.GIT_REPOSITORY_URL = scm.getUserRemoteConfigs()[0].getUrl().minus(GIT_REPOSITORY_URL_PREFIX)
+
+        env.DOCKER_REGISTRY_URL = "https://registry.hub.docker.com"
+        env.DOCKER_CREDENTIAL_ID = "docker-credential"
+      }
+    }
     stage ("Increment Version") {
       steps {
         script {
@@ -32,6 +38,7 @@ pipeline {
       }
       steps {
         script {
+          sh("git checkout ${GIT_BRANCH}")
           sh("mvn versions:set -DnewVersion=${BUILD_VERSION}")
 
           sh("git add pom.xml")
@@ -41,7 +48,9 @@ pipeline {
     }
     stage ("Maven Build") {
         steps {
-          bat "mvn clean package"
+          script {
+            sh("mvn clean package")
+          }
         }
     }
     stage ("Git Push") {
@@ -50,11 +59,8 @@ pipeline {
       }
       steps {
         script {
-          env.GIT_REPOSITORY_URL = scm.getUserRemoteConfigs()[0].getUrl().minus("https://")
-          env.GIT_REMOTE_BRANCH = scm.branches[0].name
-
           withCredentials([usernamePassword(credentialsId: GIT_CREDENTIAL_ID, usernameVariable: "GIT_USERNAME", passwordVariable: "GIT_PASSWORD")]){
-            sh("git push ${env.GIT_REMOTE_BRANCH} https://${GIT_USERNAME}:${GIT_USERNAME}@${env.GIT_REPOSITORY_URL}")
+            sh("git push ${GIT_REPOSITORY_URL_PREFIX}${GIT_USERNAME}:${GIT_USERNAME}@${GIT_URL}")
           }
         }
       }
@@ -81,8 +87,8 @@ pipeline {
       steps {
         script {
           try {
-            bat "docker stop ${PROJECT_ARTIFACT_ID}"
-            bat "docker rm ${PROJECT_ARTIFACT_ID}"
+            sh("docker stop ${PROJECT_ARTIFACT_ID}")
+            sh("docker rm ${PROJECT_ARTIFACT_ID}")
           } catch (err) {
               echo err.getMessage()
           }
@@ -91,7 +97,9 @@ pipeline {
     }
     stage("Docker Run"){
       steps {
-        bat "docker run --name ${PROJECT_ARTIFACT_ID} -d -p 28080:8080 ${PROJECT_GROUP_ID}/${PROJECT_ARTIFACT_ID}:${BUILD_VERSION}"
+        script {
+          sh("docker run --name ${PROJECT_ARTIFACT_ID} -d -p 28080:8080 ${PROJECT_GROUP_ID}/${PROJECT_ARTIFACT_ID}:${BUILD_VERSION}")
+        }
       }
     }
   }
