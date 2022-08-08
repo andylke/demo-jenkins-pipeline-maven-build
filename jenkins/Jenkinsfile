@@ -51,8 +51,10 @@ pipeline {
       steps {
         script {
           env.GIT_REPOSITORY_URL = scm.getUserRemoteConfigs()[0].getUrl().minus("https://")
+          env.GIT_REMOTE_BRANCH = scm.branches[0].name
+
           withCredentials([usernamePassword(credentialsId: GIT_CREDENTIAL_ID, usernameVariable: "GIT_USERNAME", passwordVariable: "GIT_PASSWORD")]){
-            sh("git push https://${GIT_USERNAME}:${GIT_USERNAME}@${GIT_REPOSITORY_URL}")
+            sh("git push ${env.GIT_REMOTE_BRANCH} https://${GIT_USERNAME}:${GIT_USERNAME}@${env.GIT_REPOSITORY_URL}")
           }
         }
       }
