@@ -51,7 +51,7 @@ pipeline {
           sh("git add pom.xml")
           sh("git config user.name '${GIT_COMMITTER_NAME}'")
           sh("git config user.email '${GIT_COMMITTER_EMAIL}'")
-          sh("git commit -m 'Update version to ${BUILD_VERSION}' -author '${GIT_AUTHOR_NAME_AND_EMAIL}'")
+          sh("git commit -m 'Update version to ${BUILD_VERSION}' --author '${GIT_AUTHOR_NAME_AND_EMAIL}'")
         }
       }
     }
