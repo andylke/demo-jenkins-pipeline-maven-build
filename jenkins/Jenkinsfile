@@ -5,18 +5,20 @@ pipeline {
   }
   stages {
     stage ("Prepare Environment") {
-      script {
-        env.PROJECT_GROUP_ID = "andylke"
-        def mavenPom = readMavenPom()
-        env.PROJECT_ARTIFACT_ID = mavenPom.getArtifactId()
-        env.PROJECT_VERSION = mavenPom.getVersion()
+      steps {
+        script {
+          env.PROJECT_GROUP_ID = "andylke"
+          def mavenPom = readMavenPom()
+          env.PROJECT_ARTIFACT_ID = mavenPom.getArtifactId()
+          env.PROJECT_VERSION = mavenPom.getVersion()
 
-        env.GIT_CREDENTIAL_ID = "github-credential"
-        env.GIT_REPOSITORY_URL_PREFIX = "https://"
-        env.GIT_REPOSITORY_URL = scm.getUserRemoteConfigs()[0].getUrl().minus(GIT_REPOSITORY_URL_PREFIX)
+          env.GIT_CREDENTIAL_ID = "github-credential"
+          env.GIT_REPOSITORY_URL_PREFIX = "https://"
+          env.GIT_REPOSITORY_URL = scm.getUserRemoteConfigs()[0].getUrl().minus(GIT_REPOSITORY_URL_PREFIX)
 
-        env.DOCKER_REGISTRY_URL = "https://registry.hub.docker.com"
-        env.DOCKER_CREDENTIAL_ID = "docker-credential"
+          env.DOCKER_REGISTRY_URL = "https://registry.hub.docker.com"
+          env.DOCKER_CREDENTIAL_ID = "docker-credential"
+        }
       }
     }
     stage ("Increment Version") {
@@ -47,11 +49,11 @@ pipeline {
       }
     }
     stage ("Maven Build") {
-        steps {
-          script {
-            sh("mvn clean package")
-          }
+      steps {
+        script {
+          sh("mvn clean package")
         }
+      }
     }
     stage ("Git Push") {
       when {
