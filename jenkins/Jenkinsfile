@@ -69,6 +69,7 @@ pipeline {
       steps {
         script {
           withCredentials([usernamePassword(credentialsId: GIT_CREDENTIAL_ID, usernameVariable: "GIT_USERNAME", passwordVariable: "GIT_PASSWORD")]){
+            sh("set GIT_TRACE=2")
             sh("git push ${GIT_URL_SCHEME}${GIT_PASSWORD}@${GIT_URL_DOMAIN_AND_PATH} HEAD:${GIT_REMOTE_BRANCH}")
           }
         }
