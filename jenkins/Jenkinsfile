@@ -4,19 +4,23 @@ pipeline {
     maven "maven-3"
   }
   environment {
+    GIT_CREDENTIAL_ID = "github-credential"
+    DOCKER_REGISTRY_URL = "https://registry.hub.docker.com"
+    DOCKER_CREDENTIAL_ID = "docker-credential"
+
     BUILD_GROUP_ID = "andylke"
     BUILD_ARTIFACT_ID = readMavenPom().getArtifactId()
     BUILD_VERSION = readMavenPom().getVersion()
   }
   stages {
-    stage ("Check Version Type") {
+    stage ("Check Release Type") {
       steps {
         script {
           env.INCREMENT_VERSION = "${BUILD_VERSION}".endsWith("-SNAPSHOT") ? "NO" : "YES"
         }
       }
     }
-    stage ("Increment Build Version") {
+    stage ("Increment Version") {
       when {
         environment name: "INCREMENT_VERSION", value: "YES"
       }
@@ -25,7 +29,7 @@ pipeline {
           def (majorVersion, minorVersion, patchVersion) = "${BUILD_VERSION}".split("\\.")
           env.BUILD_VERSION = majorVersion + "." + minorVersion + "." + (patchVersion.toInteger() + 1)
         }
-        bat "mvn versions:set -DnewVersion=${BUILD_VERSION}"
+        bat "mvn versions:set -DnewVersion=${env.BUILD_VERSION}"
       }
     }
     stage ("Maven Build") {
@@ -33,16 +37,16 @@ pipeline {
           bat "mvn clean package"
         }
     }
-    stage ("Commit & Push Build Version to Git") {
+    stage ("Push Incremented Version") {
       when {
         environment name: "INCREMENT_VERSION", value: "YES"
       }
       steps {
         script {
           env.GIT_REPOSITORY_URL = scm.getUserRemoteConfigs()[0].getUrl().minus("https://")
-          withCredentials([usernamePassword(credentialsId: "github-credential", usernameVariable: "GIT_USERNAME", passwordVariable: "GIT_PASSWORD")]){
-            sh("git add pom.xml")
-            sh("git commit -m 'Update version to ${BUILD_VERSION}'")
+          sh("git add pom.xml")
+          sh("git commit -m 'Update version to ${BUILD_VERSION}'")
+          withCredentials([usernamePassword(credentialsId: GIT_CREDENTIAL_ID, usernameVariable: "GIT_USERNAME", passwordVariable: "GIT_PASSWORD")]){
             sh("git push https://${GIT_USERNAME}:${GIT_USERNAME}@${GIT_REPOSITORY_URL}")
           }
         }
@@ -59,7 +63,7 @@ pipeline {
     stage("Docker Push") {
       steps {
         script {
-          docker.withRegistry("https://registry.hub.docker.com", "docker-credential") {
+          docker.withRegistry(DOCKER_REGISTRY_URL, DOCKER_CREDENTIAL_ID) {
               docker.image("${BUILD_GROUP_ID}/${BUILD_ARTIFACT_ID}:${BUILD_VERSION}").push()
               docker.image("${BUILD_GROUP_ID}/${BUILD_ARTIFACT_ID}:${BUILD_VERSION}").push("latest")
           }
