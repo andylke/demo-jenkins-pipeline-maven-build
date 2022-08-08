@@ -67,8 +67,8 @@ pipeline {
         environment name: "INCREMENT_VERSION", value: "YES"
       }
       steps {
-        withCredentials([usernamePassword(credentialsId: GIT_CREDENTIAL_ID, usernameVariable: "GIT_USERNAME", passwordVariable: "GIT_PASSWORD")]) {
-          bat "git push ${GIT_URL_SCHEME}${GIT_PASSWORD}@${GIT_URL_DOMAIN_AND_PATH}"
+        script {
+          sh("git push ${GIT_REMOTE_REPOSITORY} HEAD:${GIT_REMOTE_BRANCH}")
         }
       }
     }
