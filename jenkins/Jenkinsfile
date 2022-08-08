@@ -68,7 +68,7 @@ pipeline {
       }
       steps {
         script {
-          withCredentials([gitUsernamePassword(credentialsId: GIT_CREDENTIAL_ID)]) {
+          withCredentials([gitUsernamePassword(credentialsId: GIT_CREDENTIAL_ID, gitToolName: 'Default')]) {
             sh("git push ${GIT_REMOTE_REPOSITORY} HEAD:${GIT_REMOTE_BRANCH}")
           }
         }
