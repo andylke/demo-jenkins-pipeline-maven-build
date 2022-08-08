@@ -8,28 +8,35 @@ pipeline {
     DOCKER_REGISTRY_URL = "https://registry.hub.docker.com"
     DOCKER_CREDENTIAL_ID = "docker-credential"
 
-    BUILD_GROUP_ID = "andylke"
-    BUILD_ARTIFACT_ID = readMavenPom().getArtifactId()
-    BUILD_VERSION = readMavenPom().getVersion()
+    PROJECT_GROUP_ID = "andylke"
+    PROJECT_ARTIFACT_ID = readMavenPom().getArtifactId()
+    PROJECT_VERSION = readMavenPom().getVersion()
   }
   stages {
-    stage ("Check Release Type") {
+    stage ("Increment Version") {
       steps {
         script {
-          env.INCREMENT_VERSION = "${BUILD_VERSION}".endsWith("-SNAPSHOT") ? "NO" : "YES"
+          env.INCREMENT_VERSION = "${PROJECT_VERSION}".endsWith("-SNAPSHOT") ? "NO" : "YES"
+          if (env.INCREMENT_VERSION == "YES") {
+            def (majorVersion, minorVersion, patchVersion) = "${PROJECT_VERSION}".split("\\.")
+            env.BUILD_VERSION = majorVersion + "." + minorVersion + "." + (patchVersion.toInteger() + 1)
+          } else {
+            env.BUILD_VERSION = env.PROJECT_VERSION
+          }
         }
       }
     }
-    stage ("Increment Version") {
+    stage ("Maven Set Version") {
       when {
         environment name: "INCREMENT_VERSION", value: "YES"
       }
       steps {
         script {
-          def (majorVersion, minorVersion, patchVersion) = "${BUILD_VERSION}".split("\\.")
-          env.BUILD_VERSION = majorVersion + "." + minorVersion + "." + (patchVersion.toInteger() + 1)
+          sh("mvn versions:set -DnewVersion=${BUILD_VERSION}")
+
+          sh("git add pom.xml")
+          sh("git commit -m 'Update version to ${BUILD_VERSION}'")
         }
-        bat "mvn versions:set -DnewVersion=${env.BUILD_VERSION}"
       }
     }
     stage ("Maven Build") {
@@ -37,15 +44,13 @@ pipeline {
           bat "mvn clean package"
         }
     }
-    stage ("Push Incremented Version") {
+    stage ("Git Push") {
       when {
         environment name: "INCREMENT_VERSION", value: "YES"
       }
       steps {
         script {
           env.GIT_REPOSITORY_URL = scm.getUserRemoteConfigs()[0].getUrl().minus("https://")
-          sh("git add pom.xml")
-          sh("git commit -m 'Update version to ${BUILD_VERSION}'")
           withCredentials([usernamePassword(credentialsId: GIT_CREDENTIAL_ID, usernameVariable: "GIT_USERNAME", passwordVariable: "GIT_PASSWORD")]){
             sh("git push https://${GIT_USERNAME}:${GIT_USERNAME}@${GIT_REPOSITORY_URL}")
           }
@@ -55,8 +60,8 @@ pipeline {
     stage("Docker Build") {
       steps {
         script {
-          docker.build("${BUILD_GROUP_ID}/${BUILD_ARTIFACT_ID}:${BUILD_VERSION}",
-              "--build-arg BUILD_ARTIFACT_ID=${BUILD_ARTIFACT_ID} --build-arg BUILD_VERSION=${BUILD_VERSION} .")
+          docker.build("${PROJECT_GROUP_ID}/${PROJECT_ARTIFACT_ID}:${BUILD_VERSION}",
+              "--build-arg ARTIFACT_ID=${PROJECT_ARTIFACT_ID} --build-arg VERSION=${BUILD_VERSION} .")
         }
       }
     }
@@ -64,8 +69,8 @@ pipeline {
       steps {
         script {
           docker.withRegistry(DOCKER_REGISTRY_URL, DOCKER_CREDENTIAL_ID) {
-              docker.image("${BUILD_GROUP_ID}/${BUILD_ARTIFACT_ID}:${BUILD_VERSION}").push()
-              docker.image("${BUILD_GROUP_ID}/${BUILD_ARTIFACT_ID}:${BUILD_VERSION}").push("latest")
+              docker.image("${PROJECT_GROUP_ID}/${PROJECT_ARTIFACT_ID}:${BUILD_VERSION}").push()
+              docker.image("${PROJECT_GROUP_ID}/${PROJECT_ARTIFACT_ID}:${BUILD_VERSION}").push("latest")
           }
         }
       }
@@ -74,8 +79,8 @@ pipeline {
       steps {
         script {
           try {
-            bat "docker stop ${BUILD_ARTIFACT_ID}"
-            bat "docker rm ${BUILD_ARTIFACT_ID}"
+            bat "docker stop ${PROJECT_ARTIFACT_ID}"
+            bat "docker rm ${PROJECT_ARTIFACT_ID}"
           } catch (err) {
               echo err.getMessage()
           }
@@ -84,7 +89,7 @@ pipeline {
     }
     stage("Docker Run"){
       steps {
-        bat "docker run --name ${BUILD_ARTIFACT_ID} -d -p 28080:8080 ${BUILD_GROUP_ID}/${BUILD_ARTIFACT_ID}:${BUILD_VERSION}"
+        bat "docker run --name ${PROJECT_ARTIFACT_ID} -d -p 28080:8080 ${PROJECT_GROUP_ID}/${PROJECT_ARTIFACT_ID}:${BUILD_VERSION}"
       }
     }
   }
